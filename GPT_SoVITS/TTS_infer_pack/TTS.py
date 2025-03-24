@@ -839,98 +839,124 @@ class TTS:
             for item in data:
                 t3 = ttime()
                 if return_fragment:
+                    print(f"Working in batches...")
                     item = make_batch(item)
+                    print(f"Quantity of item batches: {len(item)}")
                     if item is None:
                         continue
-
-                batch_phones:List[torch.LongTensor] = item["phones"]
-                # batch_phones:torch.LongTensor = item["phones"]
-                batch_phones_len:torch.LongTensor = item["phones_len"]
-                all_phoneme_ids:torch.LongTensor = item["all_phones"]
-                all_phoneme_lens:torch.LongTensor  = item["all_phones_len"]
-                all_bert_features:torch.LongTensor = item["all_bert_features"]
+                # batch_phones:List[torch.LongTensor] = item["phones"]
+                # # batch_phones:torch.LongTensor = item["phones"]
+                # batch_phones_len:torch.LongTensor = item["phones_len"]
+                # all_phoneme_ids:torch.LongTensor = item["all_phones"]
+                # all_phoneme_lens:torch.LongTensor  = item["all_phones_len"]
+                # all_bert_features:List[torch.LongTensor] = item["all_bert_features"]
                 norm_text:str = item["norm_text"]
                 max_len = item["max_len"]
-
-                print(i18n("前端处理后的文本(每句):"), norm_text)
-                if no_prompt_text :
-                    prompt = None
-                else:
-                    prompt = self.prompt_cache["prompt_semantic"].expand(len(all_phoneme_ids), -1).to(self.configs.device)
-
-
-                pred_semantic_list, idx_list = self.t2s_model.model.infer_panel(
-                    all_phoneme_ids,
-                    all_phoneme_lens,
-                    prompt,
-                    all_bert_features,
-                    # prompt_phone_len=ph_offset,
-                    top_k=top_k,
-                    top_p=top_p,
-                    temperature=temperature,
-                    early_stop_num=self.configs.hz * self.configs.max_sec,
-                    max_len=max_len,
-                    repetition_penalty=repetition_penalty,
-                )
-                t4 = ttime()
-                t_34 += t4 - t3
-
                 refer_audio_spec:torch.Tensor = [item.to(dtype=self.precision, device=self.configs.device) for item in self.prompt_cache["refer_spec"]]
 
-
-                batch_audio_fragment = []
-
-                # ## vits并行推理 method 1
-                # pred_semantic_list = [item[-idx:] for item, idx in zip(pred_semantic_list, idx_list)]
-                # pred_semantic_len = torch.LongTensor([item.shape[0] for item in pred_semantic_list]).to(self.configs.device)
-                # pred_semantic = self.batch_sequences(pred_semantic_list, axis=0, pad_value=0).unsqueeze(0)
-                # max_len = 0
-                # for i in range(0, len(batch_phones)):
-                #     max_len = max(max_len, batch_phones[i].shape[-1])
-                # batch_phones = self.batch_sequences(batch_phones, axis=0, pad_value=0, max_length=max_len)
-                # batch_phones = batch_phones.to(self.configs.device)
-                # batch_audio_fragment = (self.vits_model.batched_decode(
-                #         pred_semantic, pred_semantic_len, batch_phones, batch_phones_len,refer_audio_spec
-                #     ))
-
-                if speed_factor == 1.0:
-                    # ## vits并行推理 method 2
-                    pred_semantic_list = [item[-idx:] for item, idx in zip(pred_semantic_list, idx_list)]
-                    upsample_rate = math.prod(self.vits_model.upsample_rates)
-                    audio_frag_idx = [pred_semantic_list[i].shape[0]*2*upsample_rate for i in range(0, len(pred_semantic_list))]
-                    audio_frag_end_idx = [ sum(audio_frag_idx[:i+1]) for i in range(0, len(audio_frag_idx))]
-                    all_pred_semantic = torch.cat(pred_semantic_list).unsqueeze(0).unsqueeze(0).to(self.configs.device)
-                    _batch_phones = torch.cat(batch_phones).unsqueeze(0).to(self.configs.device)
-                    _batch_audio_fragment = (self.vits_model.decode(
-                            all_pred_semantic, _batch_phones, refer_audio_spec, speed=speed_factor
-                        ).detach()[0, 0, :])
-                    audio_frag_end_idx.insert(0, 0)
-                    batch_audio_fragment= [_batch_audio_fragment[audio_frag_end_idx[i-1]:audio_frag_end_idx[i]] for i in range(1, len(audio_frag_end_idx))]
-                else:
-                # ## vits串行推理
-                    for i, idx in enumerate(idx_list):
-                        phones = batch_phones[i].unsqueeze(0).to(self.configs.device)
-                        _pred_semantic = (pred_semantic_list[i][-idx:].unsqueeze(0).unsqueeze(0))   # .unsqueeze(0)#mq要多unsqueeze一次
-                        audio_fragment =(self.vits_model.decode(
-                                _pred_semantic, phones, refer_audio_spec, speed=speed_factor
-                            ).detach()[0, 0, :])
-                        batch_audio_fragment.append(
-                            audio_fragment
-                        )  ###试试重建不带上prompt部分
-
-                t5 = ttime()
-                t_45 += t5 - t4
+                
+                ### ALYX EDITS ###
                 if return_fragment:
-                    print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
-                    yield self.audio_postprocess([batch_audio_fragment],
-                                                    self.configs.sampling_rate,
-                                                    None,
-                                                    speed_factor,
-                                                    False,
-                                                    fragment_interval
-                                                    )
-                else:
-                    audio.append(batch_audio_fragment)
+                    for index in range(len(norm_text)):
+                        print(f"####### GENERATING BATCH {index+1}#######\n")
+                        print(f"NORM_TEXT_INDEX_{index+1}: {norm_text[index]}\n")
+
+                        batch_phones:List[torch.LongTensor] = item["phones"][index].unsqueeze(0).to(self.configs.device)
+                        all_phoneme_ids:torch.LongTensor = item["all_phones"][index].unsqueeze(0).to(self.configs.device)
+                        all_phoneme_lens:torch.LongTensor  = item["all_phones_len"][index].unsqueeze(0).to(self.configs.device)
+                        all_bert_features:List[torch.LongTensor] = item["all_bert_features"][index].unsqueeze(0).to(self.configs.device)
+
+                        print(f"\nPhoneme_id: {all_phoneme_ids}\nPhoneme_len: {all_phoneme_lens}\nBert_features: {all_bert_features}\n")
+
+
+
+                        # print(i18n("前端处理后的文本(每句):"), norm_text)
+                        if no_prompt_text :
+                            prompt = None
+                        else:
+                            prompt = self.prompt_cache["prompt_semantic"].expand(len(all_phoneme_ids), -1).to(self.configs.device)
+
+                        
+                        pred_semantic_list, idx_list = self.t2s_model.model.infer_panel(
+                            all_phoneme_ids,
+                            all_phoneme_lens,
+                            prompt,
+                            all_bert_features,
+                            # prompt_phone_len=ph_offset,
+                            top_k=top_k,
+                            top_p=top_p,
+                            temperature=temperature,
+                            early_stop_num=self.configs.hz * self.configs.max_sec,
+                            max_len=max_len,
+                            repetition_penalty=repetition_penalty,
+                        )
+                        t4 = ttime()
+                        t_34 += t4 - t3
+
+                        batch_audio_fragment = []
+
+                        # ## vits并行推理 method 1
+                        # pred_semantic_list = [item[-idx:] for item, idx in zip(pred_semantic_list, idx_list)]
+                        # pred_semantic_len = torch.LongTensor([item.shape[0] for item in pred_semantic_list]).to(self.configs.device)
+                        # pred_semantic = self.batch_sequences(pred_semantic_list, axis=0, pad_value=0).unsqueeze(0)
+                        # max_len = 0
+                        # for i in range(0, len(batch_phones)):
+                        #     max_len = max(max_len, batch_phones[i].shape[-1])
+                        # batch_phones = self.batch_sequences(batch_phones, axis=0, pad_value=0, max_length=max_len)
+                        # batch_phones = batch_phones.to(self.configs.device)
+                        # batch_audio_fragment = (self.vits_model.batched_decode(
+                        #         pred_semantic, pred_semantic_len, batch_phones, batch_phones_len,refer_audio_spec
+                        #     ))
+
+                        # if speed_factor == 1.0:
+                        #     # ## vits并行推理 method 2
+                        #     pred_semantic_list = [item[-idx:] for item, idx in zip(pred_semantic_list, idx_list)]
+                        #     upsample_rate = math.prod(self.vits_model.upsample_rates)
+                        #     audio_frag_idx = [pred_semantic_list[i].shape[0]*2*upsample_rate for i in range(0, len(pred_semantic_list))]
+                        #     audio_frag_end_idx = [ sum(audio_frag_idx[:i+1]) for i in range(0, len(audio_frag_idx))]
+                        #     all_pred_semantic = torch.cat(pred_semantic_list).unsqueeze(0).unsqueeze(0).to(self.configs.device)
+                        #     # _batch_phones = torch.cat([batch_phones[index]]).unsqueeze(0).to(self.configs.device)
+                        #     _batch_phones = batch_phones
+                        #     _batch_audio_fragment = (self.vits_model.decode(
+                        #             all_pred_semantic, _batch_phones, refer_audio_spec, speed=speed_factor
+                        #         ).detach()[0, 0, :])
+                        #     audio_frag_end_idx.insert(0, 0)
+                        #     batch_audio_fragment= [_batch_audio_fragment[audio_frag_end_idx[i-1]:audio_frag_end_idx[i]] for i in range(1, len(audio_frag_end_idx))]
+                        # else:
+                        # # ## vits串行推理
+                        for i, idx in enumerate(idx_list):
+                            phones = batch_phones
+                            _pred_semantic = (pred_semantic_list[i][-idx:].unsqueeze(0).unsqueeze(0))   # .unsqueeze(0)#mq要多unsqueeze一次
+                            audio_fragment =(self.vits_model.decode(
+                                    _pred_semantic, phones, refer_audio_spec, speed=speed_factor
+                                ).detach()[0, 0, :])
+                            batch_audio_fragment.append(
+                                audio_fragment
+                            )  ###试试重建不带上prompt部分
+
+                        t5 = ttime()
+                        t_45 += t5 - t4
+                        if return_fragment:
+                            print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
+                            print(f"YIELDING BATCH {index}")
+                            yield self.audio_postprocess([batch_audio_fragment],
+                                                            self.configs.sampling_rate,
+                                                            None,
+                                                            speed_factor,
+                                                            False,
+                                                            fragment_interval
+                                                            )
+                    # if return_fragment:
+                    #     print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
+                    #     print("audio should be yielded? RIGHT???")
+                    #     yield self.audio_postprocess([batch_audio_fragment],
+                    #                                     self.configs.sampling_rate,
+                    #                                     None,
+                    #                                     speed_factor,
+                    #                                     False,
+                    #                                     fragment_interval
+                    #                                     )
+                audio.append(batch_audio_fragment)
 
                 if self.stop_flag:
                     yield self.configs.sampling_rate, np.zeros(int(self.configs.sampling_rate),
