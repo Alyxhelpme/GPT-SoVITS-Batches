@@ -841,7 +841,6 @@ class TTS:
                 if return_fragment:
                     print(f"Working in batches...")
                     item = make_batch(item)
-                    print(f"Quantity of item batches: {len(item)}")
                     if item is None:
                         continue
                 # batch_phones:List[torch.LongTensor] = item["phones"]
