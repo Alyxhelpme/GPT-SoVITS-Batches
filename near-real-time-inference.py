@@ -147,17 +147,17 @@ tts_pipeline = TTS(tts_config)
 gpt_path = tts_config.t2s_weights_path
 sovits_path = tts_config.vits_weights_path
 version = tts_config.version
-# tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio, so
+tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
 
 
 #### Default values ####
 text_language = "en"
-top_k = 5 #min 1 max 100
+top_k = 22 #min 1 max 100
 top_p = 1 #min 0 max 1
 temperature = 1
-text_split_method = "English"
+text_split_method = "4sentences"
 batch_size = 20
-speed_factor = 1 #min 0.6 max 1.65
+speed_factor = 0.6 #min 0.6 max 1.65
 split_bucket = True #Bool -> Data Bucketing (reduces some computation when using parallel inference)
 parallel_infer = True
 fragment_interval = 0.3 #Dont know the importance of this value yet Segment Interval (Seconds) float
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     try:
         while True:
             text = input("Sonic's speech: ")
-            fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty, prompt_text, ref_audio_path=ref_audio_path)
+            fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty,ref_audio_path=ref_audio_path)
     except KeyboardInterrupt:
         print("\nExiting...")
     finally:

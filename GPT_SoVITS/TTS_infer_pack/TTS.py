@@ -843,12 +843,7 @@ class TTS:
                     item = make_batch(item)
                     if item is None:
                         continue
-                # batch_phones:List[torch.LongTensor] = item["phones"]
-                # # batch_phones:torch.LongTensor = item["phones"]
-                # batch_phones_len:torch.LongTensor = item["phones_len"]
-                # all_phoneme_ids:torch.LongTensor = item["all_phones"]
-                # all_phoneme_lens:torch.LongTensor  = item["all_phones_len"]
-                # all_bert_features:List[torch.LongTensor] = item["all_bert_features"]
+
                 norm_text:str = item["norm_text"]
                 max_len = item["max_len"]
                 refer_audio_spec:torch.Tensor = [item.to(dtype=self.precision, device=self.configs.device) for item in self.prompt_cache["refer_spec"]]
@@ -935,16 +930,15 @@ class TTS:
 
                         t5 = ttime()
                         t_45 += t5 - t4
-                        if return_fragment:
-                            print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
-                            print(f"YIELDING BATCH {index}")
-                            yield self.audio_postprocess([batch_audio_fragment],
-                                                            self.configs.sampling_rate,
-                                                            None,
-                                                            speed_factor,
-                                                            False,
-                                                            fragment_interval
-                                                            )
+                        print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
+                        print(f"YIELDING BATCH {index}")
+                        yield self.audio_postprocess([batch_audio_fragment],
+                                                        self.configs.sampling_rate,
+                                                        None,
+                                                        speed_factor,
+                                                        False,
+                                                        fragment_interval
+                                                        )
                     # if return_fragment:
                     #     print("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t4 - t3, t5 - t4))
                     #     print("audio should be yielded? RIGHT???")
@@ -955,6 +949,13 @@ class TTS:
                     #                                     False,
                     #                                     fragment_interval
                     #                                     )
+                else:
+                    batch_phones:List[torch.LongTensor] = item["phones"]
+                    # batch_phones:torch.LongTensor = item["phones"]
+                    batch_phones_len:torch.LongTensor = item["phones_len"]
+                    all_phoneme_ids:torch.LongTensor = item["all_phones"]
+                    all_phoneme_lens:torch.LongTensor  = item["all_phones_len"]
+                    all_bert_features:List[torch.LongTensor] = item["all_bert_features"]
                 audio.append(batch_audio_fragment)
 
                 if self.stop_flag:
