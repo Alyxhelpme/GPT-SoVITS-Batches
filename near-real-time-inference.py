@@ -4,7 +4,18 @@ import random
 import torch
 import numpy as np
 import sounddevice as sd
+sd.default.blocksize = 4096  # Adjust buffer size
+sd.default.latency = 0.2
+from characterai import aiocai
+import numpy as np
+from scipy.io.wavfile import write
+import asyncio
 import threading
+import logging
+logging.basicConfig(
+    level=logging.INFO
+)
+logger = logging.getLogger("TTS")
 
 
 sys.path.append('./GPT_SoVITS')
@@ -44,31 +55,33 @@ cut_method = {
 import queue
 audio_queue = queue.Queue()
 
-
-
-
 def play_audio():
-     while True:
+    while True:
         chunk = audio_queue.get()
         if chunk is None:
             audio_queue.task_done()
             break
         try:
             sampling_rate, audio_chunk = chunk
+            # sd.sleep(200)
+            sd.default.samplerate = sampling_rate
+            # sd.default.channels = 1 if len(audio_chunk.shape) == 1 else audio_chunk.shape[1]
             sd.play(audio_chunk, sampling_rate)
             sd.wait()
             audio_queue.task_done()
 
         except Exception as e:
-            print(f"Error during audio playback: {e}")
+            logger.debug(f"Error during audio playback: {e}")
             audio_queue.task_done()
+            continue
+        
 
 
 def shorten_if_longer(ref_audio_path: str):
     audio = AudioSegment.from_wav(ref_audio_path)
 
     if len(audio)>10000: #if its longer than 10 seconds
-        print("Audio is longer than 10 seconds, we're trimming it!")
+        logger.debug("Audio is longer than 10 seconds, we're trimming it!")
         audio = audio[:10000] #no matter what's inside of it, we cut it to 10 seconds
 
         audio.export(f"./GPT_SoVITS/audio_sources/{os.path.basename(ref_audio_path)}",format="wav")
@@ -76,7 +89,7 @@ def shorten_if_longer(ref_audio_path: str):
     if len(audio)<3000: #Audios shorter than 3 secs will return error
         raise ValueError("Audio duration must be between 3 and 10 seconds.")
     else:
-        print("File length is good")
+        logger.debug("File length is good")
         return ref_audio_path
     
 #### Inference invocation ####
@@ -110,8 +123,8 @@ def fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,f
         "repetition_penalty": repetition_penalty,
     }
     # for item, actual_seed in tts_pipeline.run(inputs):
-    #     print("Generated Item:", item)
-    #     print("Seed Used:", actual_seed)
+    #     logger.debug("Generated Item:", item)
+    #     logger.debug("Seed Used:", actual_seed)
     #     yield item, actual_seed
 
 
@@ -124,6 +137,9 @@ def fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,f
     audio_queue.put(None)
 
     # sd.stop()
+
+
+
 
 #### Initialization of the model ####
 is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
@@ -141,7 +157,7 @@ tts_config.version = version #or #v1
 tts_config.t2s_weights_path = gpt_model_path
 tts_config.vits_weights_path = sovits_model_path
 
-print(tts_config)
+logger.debug(tts_config)
 
 tts_pipeline = TTS(tts_config)
 gpt_path = tts_config.t2s_weights_path
@@ -152,12 +168,12 @@ tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
 
 #### Default values ####
 text_language = "en"
-top_k = 22 #min 1 max 100
+top_k = 5 #min 1 max 100
 top_p = 1 #min 0 max 1
 temperature = 1
-text_split_method = "4sentences"
+text_split_method = "English"
 batch_size = 20
-speed_factor = 0.6 #min 0.6 max 1.65
+speed_factor = 1 #min 0.6 max 1.65
 split_bucket = True #Bool -> Data Bucketing (reduces some computation when using parallel inference)
 parallel_infer = True
 fragment_interval = 0.3 #Dont know the importance of this value yet Segment Interval (Seconds) float
@@ -166,19 +182,53 @@ repetition_penalty = 1.35 #dont ask me
 prompt_text = "At Sonic Stadium asks, Dear Eggman and Shadow, We're thinking about rebranding from The Sonic Stadium but can't decide on anything. Can we ask for your input? You know what, I'll take this. I mean..."
 
 
+######### CHAR_AI API #########
+
+TOKEN= os.getenv("CAI_TOKEN","")
+
+async def main():
+    char = input('CHAR ID: ')
+
+    client = aiocai.Client(TOKEN)
+
+    me = await client.get_me()
+
+    async with await client.connect() as chat:
+        new, answer = await chat.new_chat(
+            char, me.id
+        )
+
+        fast_inference(answer.text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty)
+
+        logger.info(f'{answer.name}: {answer.text}')
+
+        
+        while True:
+            text = input('YOU: ')
+
+            message = await chat.send_message(
+                char, new.chat_id, text
+            )
+
+            fast_inference(message.text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty)
+
+            logger.info(f'{message.name}: {message.text}')
+
+
 
 
 
 if __name__ == "__main__":
 # Initialize the queue
     try:
+        # asyncio.run(main())
         while True:
             text = input("Sonic's speech: ")
             fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty,ref_audio_path=ref_audio_path)
     except KeyboardInterrupt:
-        print("\nExiting...")
+        logger.info("\nExiting...")
     finally:
         audio_queue.put(None)
         # Signal threads to stop and wait for them
-        print("Cleanup completed.")
+        logger.info("Cleanup completed.")
         

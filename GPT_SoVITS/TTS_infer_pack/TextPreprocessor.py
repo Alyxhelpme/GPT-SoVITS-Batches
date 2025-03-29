@@ -4,7 +4,8 @@ import os, sys
 from tqdm import tqdm
 now_dir = os.getcwd()
 sys.path.append(now_dir)
-
+import logging
+logger = logging.getLogger("TTS")
 import re
 import torch
 from text.LangSegmenter import LangSegmenter
@@ -56,11 +57,11 @@ class TextPreprocessor:
         self.device = device
 
     def preprocess(self, text:str, lang:str, text_split_method:str, version:str="v2")->List[Dict]:
-        print(f'############ {i18n("切分文本")} ############')
+        logger.debug(f'############ {i18n("切分文本")} ############')
         text = self.replace_consecutive_punctuation(text)
         texts = self.pre_seg_text(text, lang, text_split_method)
         result = []
-        print(f'############ {i18n("提取文本Bert特征")} ############')
+        logger.debug(f'############ {i18n("提取文本Bert特征")} ############')
         for text in tqdm(texts):
             phones, bert_features, norm_text = self.segment_and_extract_feature_for_text(text, lang, version)
             if phones is None or norm_text=="":
@@ -79,8 +80,8 @@ class TextPreprocessor:
             return []
         if (text[0] not in splits and len(get_first(text)) < 4):
             text = "。" + text if lang != "en" else "." + text
-        print(i18n("实际输入的目标文本:"))
-        print(text)
+        logger.debug(i18n("实际输入的目标文本:"))
+        logger.debug(text)
 
         seg_method = get_seg_method(text_split_method)
         text = seg_method(text)
@@ -109,8 +110,8 @@ class TextPreprocessor:
             else:
                 texts.append(text)
 
-        print(i18n("实际输入的目标文本(切句后):"))
-        print(texts)
+        logger.debug(i18n("实际输入的目标文本(切句后):"))
+        logger.debug(texts)
         return texts
 
     def segment_and_extract_feature_for_text(self, text:str, language:str, version:str="v1")->Tuple[list, torch.Tensor, str]:
@@ -161,8 +162,8 @@ class TextPreprocessor:
                         # 因无法区别中日韩文汉字,以用户输入为准
                         langlist.append(language)
                     textlist.append(tmp["text"])
-            # print(textlist)
-            # print(langlist)
+            # logger.debug(textlist)
+            # logger.debug(langlist)
             phones_list = []
             bert_list = []
             norm_text_list = []

@@ -10,6 +10,7 @@ import unicodedata
 measurement_map = {
     "m": ["meter", "meters"],
     'km': ["kilometer", "kilometers"],
+    "mph": ["miles per hour"],
     "km/h": ["kilometer per hour", "kilometers per hour"],
     "ft": ["feet", "feet"],
     "L": ["liter", "liters"],
@@ -238,7 +239,7 @@ def normalize(text):
     """
 
     text = re.sub(_ordinal_number_re, _convert_ordinal, text)
-    text = re.sub(r'(?<!\d)-|-(?!\d)', ' minus ', text)
+    text = re.sub(r'(?<=\d)\s*-\s*(?=\d)|(?<!\S)-(?=\d)', ' minus ', text)
     text = re.sub(_comma_number_re, _remove_commas, text)
     text = re.sub(_time_re, _expand_time, text)
     text = re.sub(_measurement_re, _expand_measurement, text)
@@ -251,6 +252,8 @@ def normalize(text):
     text = re.sub(_ordinal_re, _expand_ordinal, text)
     text = re.sub(_number_re, _expand_number, text)
 
+    # text = text.replace("’", "'").replace("‘", "'") #Curly quotes should be replaced
+
     text = ''.join(char for char in unicodedata.normalize('NFD', text)
                     if unicodedata.category(char) != 'Mn')  # Strip accents
 
@@ -259,7 +262,7 @@ def normalize(text):
     text = re.sub(r"(?i)i\.e\.", "that is", text)
     text = re.sub(r"(?i)e\.g\.", "for example", text)
     # 增加纯大写单词拆分
-    text = re.sub(r'(?<!^)(?<![\s])([A-Z])', r' \1', text)
+    # text = re.sub(r'(?<!^)(?<![\s])([A-Z])(?=[a-z])', r' \1', text)
     return text
 
 
