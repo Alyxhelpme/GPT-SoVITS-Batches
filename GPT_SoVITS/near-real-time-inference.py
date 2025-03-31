@@ -221,10 +221,10 @@ async def main():
 if __name__ == "__main__":
 # Initialize the queue
     try:
-        # asyncio.run(main())
-        while True:
-            text = input("Sonic's speech: ")
-            fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty,ref_audio_path=ref_audio_path)
+        asyncio.run(main())
+        # while True:
+        #     text = input("Sonic's speech: ")
+        #     fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty,ref_audio_path=ref_audio_path)
     except KeyboardInterrupt:
         logger.info("\nExiting...")
     finally:
