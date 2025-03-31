@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="GPT_SoVITS_Batches",
     version="0.1",
-    packages=find_packages(include=["GPT_SoVITS", "GPT_SoVITS.*"]),
+    packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
     description="A package for GPT-SoVITS with batch support",
     author="The GPT-SoVITS dev team (not me)",
