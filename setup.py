@@ -13,7 +13,7 @@ setup(
         "License :: OSI Approved :: MIT License",
     ],
     package_data={
-        "": ["*.json"],  # Include all JSON files in all packages
+        "": ["*.json","*.txt"],  # Include all JSON and txt files in all packages
     },
     include_package_data=True,
 )
