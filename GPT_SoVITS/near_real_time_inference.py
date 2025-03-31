@@ -2,6 +2,7 @@ import os
 import sys
 import random
 import torch
+import warnings
 import numpy as np
 import sounddevice as sd
 sd.default.blocksize = 4096  # Adjust buffer size
@@ -17,15 +18,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TTS")
 
-
-sys.path.append('./GPT_SoVITS')
-
-cnhubert_base_path = os.environ.setdefault(
-    "cnhubert_base_path", "./GPT_SoVITS/pretrained_models/chinese-hubert-base"
+# Check if 'cnhubert_base_path' exists, otherwise set a default and issue a warning
+cnhubert_base_path = os.environ.get(
+    "cnhubert_base_path", "./pretrained_models/chinese-hubert-base"
 )
-bert_path = os.environ.setdefault(
-    "bert_path", "./GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
+
+if "cnhubert_base_path" not in os.environ:
+    warnings.warn(
+        "Environment variable 'cnhubert_base_path' not found. Using default path: "
+        + cnhubert_base_path
+    )
+
+# cnhubert_base_path = os.environ.setdefault(
+#     "cnhubert_base_path", "./pretrained_models/chinese-hubert-base"
+# )
+
+# Check if 'bert_path' exists, otherwise set a default and issue a warning
+bert_path = os.environ.get(
+    "bert_path", "./pretrained_models/chinese-roberta-wwm-ext-large"
 )
+
+if "bert_path" not in os.environ:
+    warnings.warn(
+        "Environment variable 'bert_path' not found. Using default path: " + bert_path
+    )
+# bert_path = os.environ.setdefault(
+#     "bert_path", "./GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
+# )
 
 from text import symbols2 as symbols_v2
 from TTS_infer_pack.TTS import TTS, TTS_Config
