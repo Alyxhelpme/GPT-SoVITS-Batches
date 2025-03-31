@@ -27,7 +27,7 @@ bert_path = os.environ.setdefault(
     "bert_path", "./GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
 )
 
-from GPT_SoVITS.text import symbols2 as symbols_v2
+from text import symbols2 as symbols_v2
 from TTS_infer_pack.TTS import TTS, TTS_Config
 from TTS_infer_pack.text_segmentation_method import get_method
 # from GPT_SoVITS.inference_webui import change_gpt_weights, change_sovits_weights, get_tts_wav
