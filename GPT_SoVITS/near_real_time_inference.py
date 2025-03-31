@@ -19,6 +19,9 @@ logging.basicConfig(
 logger = logging.getLogger("TTS")
 
 # sys.path.append('./GPT_SoVITS')
+module_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+# if module_path not in sys.path:
+sys.path.append(module_path)
 
 # Check if 'cnhubert_base_path' exists, otherwise set a default and issue a warning
 cnhubert_base_path = os.environ.get(
