@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TTS")
 
-sys.path.append('./GPT_SoVITS')
+# sys.path.append('./GPT_SoVITS')
 
 # Check if 'cnhubert_base_path' exists, otherwise set a default and issue a warning
 cnhubert_base_path = os.environ.get(
@@ -48,7 +48,7 @@ if "bert_path" not in os.environ:
 #     "bert_path", "./GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
 # )
 
-from GPT_SoVITS.text import symbols2 as symbols_v2
+# from text import symbols2 as symbols_v2
 from TTS_infer_pack.TTS import TTS, TTS_Config
 from TTS_infer_pack.text_segmentation_method import get_method
 # from GPT_SoVITS.inference_webui import change_gpt_weights, change_sovits_weights, get_tts_wav
@@ -73,8 +73,7 @@ cut_method = {
     i18n("Punctuations"): "cut5",
 }
 
-import queue
-audio_queue = queue.Queue()
+
 
 def play_audio():
     while True:
@@ -160,47 +159,46 @@ def fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,f
     # sd.stop()
 
 
+def initialize_default():
+    #### Initialization of the model ####
+    is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
+
+    gpt_model_path = "GPT_SoVITS/pretrained_models/pretrained_sonic/Sonic-SoVITS1-e10.ckpt"
+    sovits_model_path = "GPT_SoVITS/pretrained_models/pretrained_sonic/Sonic-SoVITS1_e8_s8736.pth"
+    ref_audio_path = shorten_if_longer("I:/Mi unidad/SonicAI/rogerSonicTTSdataset/wavs/audio630.wav")
+    version = "v2"
+
+    ##Initialize model config
+    tts_config = TTS_Config("GPT_SoVITS/configs/tts_infer.yaml")
+    tts_config.device = "cuda"
+    tts_config.is_half = is_half
+    tts_config.version = version #or #v1
+    tts_config.t2s_weights_path = gpt_model_path
+    tts_config.vits_weights_path = sovits_model_path
+
+    logger.debug(tts_config)
+
+    tts_pipeline = TTS(tts_config)
+    gpt_path = tts_config.t2s_weights_path
+    sovits_path = tts_config.vits_weights_path
+    version = tts_config.version
+    tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
 
 
-#### Initialization of the model ####
-is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
-
-gpt_model_path = "GPT_SoVITS/pretrained_models/pretrained_sonic/Sonic-SoVITS1-e10.ckpt"
-sovits_model_path = "GPT_SoVITS/pretrained_models/pretrained_sonic/Sonic-SoVITS1_e8_s8736.pth"
-ref_audio_path = shorten_if_longer("I:/Mi unidad/SonicAI/rogerSonicTTSdataset/wavs/audio630.wav")
-version = "v2"
-
-##Initialize model config
-tts_config = TTS_Config("GPT_SoVITS/configs/tts_infer.yaml")
-tts_config.device = "cuda"
-tts_config.is_half = is_half
-tts_config.version = version #or #v1
-tts_config.t2s_weights_path = gpt_model_path
-tts_config.vits_weights_path = sovits_model_path
-
-logger.debug(tts_config)
-
-tts_pipeline = TTS(tts_config)
-gpt_path = tts_config.t2s_weights_path
-sovits_path = tts_config.vits_weights_path
-version = tts_config.version
-tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
-
-
-#### Default values ####
-text_language = "en"
-top_k = 5 #min 1 max 100
-top_p = 1 #min 0 max 1
-temperature = 1
-text_split_method = "English"
-batch_size = 20
-speed_factor = 1 #min 0.6 max 1.65
-split_bucket = True #Bool -> Data Bucketing (reduces some computation when using parallel inference)
-parallel_infer = True
-fragment_interval = 0.3 #Dont know the importance of this value yet Segment Interval (Seconds) float
-keep_random = True #True THIS PERMITS THAT THE VOICE OUTPUT IS RANDOM, ALLOWING VARIETY
-repetition_penalty = 1.35 #dont ask me
-prompt_text = "At Sonic Stadium asks, Dear Eggman and Shadow, We're thinking about rebranding from The Sonic Stadium but can't decide on anything. Can we ask for your input? You know what, I'll take this. I mean..."
+    #### Default values ####
+    text_language = "en"
+    top_k = 5 #min 1 max 100
+    top_p = 1 #min 0 max 1
+    temperature = 1
+    text_split_method = "English"
+    batch_size = 20
+    speed_factor = 1 #min 0.6 max 1.65
+    split_bucket = True #Bool -> Data Bucketing (reduces some computation when using parallel inference)
+    parallel_infer = True
+    fragment_interval = 0.3 #Dont know the importance of this value yet Segment Interval (Seconds) float
+    keep_random = True #True THIS PERMITS THAT THE VOICE OUTPUT IS RANDOM, ALLOWING VARIETY
+    repetition_penalty = 1.35 #dont ask me
+    prompt_text = "At Sonic Stadium asks, Dear Eggman and Shadow, We're thinking about rebranding from The Sonic Stadium but can't decide on anything. Can we ask for your input? You know what, I'll take this. I mean..."
 
 
 ######### CHAR_AI API #########
@@ -240,6 +238,8 @@ async def main():
 
 
 if __name__ == "__main__":
+    import queue
+    audio_queue = queue.Queue()
 # Initialize the queue
     try:
         asyncio.run(main())
