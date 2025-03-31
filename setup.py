@@ -12,4 +12,8 @@ setup(
         "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: MIT License",
     ],
+    package_data={
+        "": ["*.json"],  # Include all JSON files in all packages
+    },
+    include_package_data=True,
 )
