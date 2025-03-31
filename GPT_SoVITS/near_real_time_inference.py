@@ -18,6 +18,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TTS")
 
+sys.path.append('./GPT_SoVITS')
+
 # Check if 'cnhubert_base_path' exists, otherwise set a default and issue a warning
 cnhubert_base_path = os.environ.get(
     "cnhubert_base_path", "./pretrained_models/chinese-hubert-base"
@@ -46,7 +48,7 @@ if "bert_path" not in os.environ:
 #     "bert_path", "./GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
 # )
 
-from text import symbols2 as symbols_v2
+from GPT_SoVITS.text import symbols2 as symbols_v2
 from TTS_infer_pack.TTS import TTS, TTS_Config
 from TTS_infer_pack.text_segmentation_method import get_method
 # from GPT_SoVITS.inference_webui import change_gpt_weights, change_sovits_weights, get_tts_wav
