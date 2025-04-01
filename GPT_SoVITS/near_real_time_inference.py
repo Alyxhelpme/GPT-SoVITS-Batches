@@ -65,7 +65,6 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-from pydub import AudioSegment
 
 cut_method = {
     i18n("不切"):"cut0",
@@ -118,10 +117,7 @@ def shorten_if_longer(ref_audio_path: str):
 #### Inference invocation ####
 
 
-def fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty, prompt_text="", ref_audio_path = None):
-    #Start thread
-    play_thread = threading.Thread(target=play_audio, daemon=True)
-    play_thread.start()
+def fast_inference(tts_pipeline,text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty, batch_size=20, speed_factor=1, prompt_text="", ref_audio_path = None):
 
     seed = -1 if keep_random else seed
     actual_seed = seed if seed not in [-1, "", None] else random.randrange(1 << 32)
@@ -153,11 +149,12 @@ def fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,f
 
     for chunk in tts_pipeline.run(inputs):
         # sampling_rate, audio_chunk = chunk
-        audio_queue.put(chunk)
+        yield chunk
+        # audio_queue.put(chunk)
         # threading.Thread(target=play_audio, args=(audio_chunk, sampling_rate)).start()
         # sd.play(audio_chunk, sampling_rate)
         # sd.wait()
-    audio_queue.put(None)
+    # audio_queue.put(None)
 
     # sd.stop()
 
@@ -202,6 +199,33 @@ def initialize_default():
     keep_random = True #True THIS PERMITS THAT THE VOICE OUTPUT IS RANDOM, ALLOWING VARIETY
     repetition_penalty = 1.35 #dont ask me
     prompt_text = "At Sonic Stadium asks, Dear Eggman and Shadow, We're thinking about rebranding from The Sonic Stadium but can't decide on anything. Can we ask for your input? You know what, I'll take this. I mean..."
+
+def initialize_model(gpt_model_path:str,sovits_model_path:str,ref_audio_path:str,version="v2",languages="en"):
+    is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
+
+    gpt_model_path = gpt_model_path
+    sovits_model_path=sovits_model_path
+    ref_audio_path= shorten_if_longer(ref_audio_path),
+    version="v2"
+
+    ##Initialize model config
+    tts_config = TTS_Config("GPT_SoVITS/configs/tts_infer.yaml")
+    tts_config.device = "cuda"
+    tts_config.is_half = is_half
+    tts_config.version = version #or #v1
+    tts_config.t2s_weights_path = gpt_model_path
+    tts_config.vits_weights_path = sovits_model_path
+    tts_config.languages=languages
+
+    logger.info(tts_config)
+    tts_pipeline = TTS(tts_config)
+    tts_config.t2s_weights_path
+    tts_config.vits_weights_path
+    version = tts_config.version
+    tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
+
+    return tts_pipeline
+
 
 
 ######### CHAR_AI API #########
@@ -248,6 +272,9 @@ if __name__ == "__main__":
         asyncio.run(main())
         # while True:
         #     text = input("Sonic's speech: ")
+        #Start thread
+        # play_thread = threading.Thread(target=play_audio, daemon=True)
+        # play_thread.start()
         #     fast_inference(text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty,ref_audio_path=ref_audio_path)
     except KeyboardInterrupt:
         logger.info("\nExiting...")
