@@ -14,9 +14,9 @@ from scipy.io.wavfile import write
 import asyncio
 import threading
 import logging
-logging.basicConfig(
-    level=logging.INFO
-)
+# logging.basicConfig(
+#     level=logging.INFO
+# )
 logger = logging.getLogger("TTS")
 
 # sys.path.append('./GPT_SoVITS')
