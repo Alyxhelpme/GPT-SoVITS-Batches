@@ -206,7 +206,7 @@ def initialize_model(gpt_model_path:str,sovits_model_path:str,ref_audio_path:str
 
     gpt_model_path = gpt_model_path
     sovits_model_path=sovits_model_path
-    ref_audio_path= shorten_if_longer(ref_audio_path),
+    ref_audio_path= ref_audio_path
     version="v2"
 
     ##Initialize model config
