@@ -118,7 +118,7 @@ def shorten_if_longer(ref_audio_path: str):
 #### Inference invocation ####
 
 
-def fast_inference(tts_pipeline,text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty, keep_random=True, seed=1,batch_size=20, speed_factor=1, prompt_text="", ref_audio_path = None):
+def fast_inference(tts_pipeline,text,top_k,top_p,temperature,text_split_method,split_bucket,fragment_interval,parallel_infer,repetition_penalty, keep_random=True, seed=-1,batch_size=20, speed_factor=1, prompt_text="", ref_audio_path = None):
 
     seed = -1 if keep_random else seed
     actual_seed = seed if seed not in [-1, "", None] else random.randrange(1 << 32)
