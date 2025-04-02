@@ -201,7 +201,7 @@ def initialize_default():
     repetition_penalty = 1.35 #dont ask me
     prompt_text = "At Sonic Stadium asks, Dear Eggman and Shadow, We're thinking about rebranding from The Sonic Stadium but can't decide on anything. Can we ask for your input? You know what, I'll take this. I mean..."
 
-def initialize_model(gpt_model_path:str,sovits_model_path:str,ref_audio_path:str,version="v2",languages="en"):
+def initialize_model(gpt_model_path:str,sovits_model_path:str,ref_audio_path:str = None,version="v2",languages="en"):
     is_half = eval(os.environ.get("is_half", "True")) and torch.cuda.is_available()
 
     gpt_model_path = gpt_model_path
@@ -223,7 +223,8 @@ def initialize_model(gpt_model_path:str,sovits_model_path:str,ref_audio_path:str
     tts_config.t2s_weights_path
     tts_config.vits_weights_path
     version = tts_config.version
-    tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
+    if ref_audio_path != None:
+        tts_pipeline.set_ref_audio(ref_audio_path) ## Set the default audio
 
     return tts_pipeline
 
